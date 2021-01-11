@@ -1,4 +1,9 @@
-// https://www.ronnieho.dev/blog/deno/deno-graphql-server/
+// 本项目是参考该篇文章 https://www.ronnieho.dev/blog/deno/deno-graphql-server/,做了如下增强
+/**
+ * 1. 可以连接mysql 数据库
+ * 2. 确保可以返回graphql数据
+ */
+// deno run --allow-net  server.ts
 import { Application, Router } from 'https://deno.land/x/oak@v6.0.1/mod.ts';
 import { buildSchema, graphql } from 'https://cdn.pika.dev/graphql@^15.0.0';
 import { queryMysqlResults } from './mysql-query.ts';
