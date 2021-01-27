@@ -3,9 +3,31 @@
  * 1. 可以连接mysql 数据库
  * 2. 确保可以返回graphql数据
  */
-// deno run --allow-net  server.ts
+// deno run --allow-net --allow-read server.ts
+// GET: http://localhost:7777/graphql
+// GET: http://localhost:7777/index.html - it is access vue3 page under static folder
+/**
+{
+  books {
+    id
+    title
+    author
+    country
+    alexa
+    url
+    __typename
+  }
+}
+ */
 import { Application, Router } from 'https://deno.land/x/oak@v6.0.1/mod.ts';
 import { buildSchema, graphql } from 'https://cdn.pika.dev/graphql@^15.0.0';
+import {
+  bold,
+  cyan,
+  green,
+  red,
+  yellow,
+} from "https://deno.land/std@0.82.0/fmt/colors.ts";
 import { queryMysqlResults } from './mysql-query.ts';
 import { closeMysqlConnection } from './mysql-close.ts';
 
@@ -85,8 +107,16 @@ const graphiqlHTML = `<html>
 </html>`
 
 const router = new Router();
-
 router
+  // .all('*', async (ctx, next) => {
+  //   // ctx.response.headers.set('Access-Control-Allow-Origin', '*');
+  //   // ctx.response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , myheader');
+  //   // ctx.response.headers.set('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
+  //   await next();
+  // })
+  .get("/", (context) => {
+    context.response.body = "Hello world!";
+  })
   .get('/graphql', context => {
     context.response.body = graphiqlHTML;
   })
@@ -97,12 +127,33 @@ router
     if (valueResult.query) query = valueResult.query;
 
     graphql(schema, query, resolvers).then((response => {
+      context.response.headers.set('Access-Control-Allow-Origin', '*');
+      context.response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , myheader');
+      context.response.headers.set('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
       context.response.body = response;
     }))
+  })
+  .options('/graphql', async (ctx, next) => {
+    ctx.response.headers.set('Access-Control-Allow-Origin', '*');
+    ctx.response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , myheader');
+    ctx.response.headers.set('Access-Control-Allow-Methods', 'PUT, POST, GET, DELETE, OPTIONS');
+    // await next();
+    ctx.response.status = 200;
+    return;
   });
 
 app.use(router.routes());
 app.use(router.allowedMethods());
-
+app.use(async (context) => {
+  await context.send({
+    root: `${Deno.cwd()}/static`,
+    index: "index.html",
+  });
+});
 console.log(`GraphQL Server running on http://localhost:${port}/graphql`);
-app.listen({ port });
+app.addEventListener("listen", ({ hostname, port }) => {
+  console.log(
+    bold("Start listening on ") + yellow(`${hostname}:${port}`),
+  );
+});
+await app.listen({ port });
